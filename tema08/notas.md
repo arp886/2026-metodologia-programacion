@@ -8,6 +8,8 @@
 
 **`java.nio.files.Files`** Contiene únicamente métodos estáticos para el manejo de ficheros. (<https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/file/Files.html>)
 
+**`java.nio.file.FileSystem`** Información sobre el filesystem actual, la ruta actual (donde se ejecuta el programa), y generación de los `Path` respectivos. (<https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/file/FileSystem.html>)
+
 ## Excepciones de entrada/salida
 
 **`java.io.IOException`** Es la excepción base para errores de entrada/salida: fallos al leer, escribir, cerrar streams, acceder a ficheros, etc. Justifica su existencia porque agrupa errores de I/O recuperables o declarables mediante `throws`. (<https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/io/IOException.html>)
