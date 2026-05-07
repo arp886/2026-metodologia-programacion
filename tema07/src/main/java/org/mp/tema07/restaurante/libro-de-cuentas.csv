@@ -1,0 +1,101 @@
+﻿Fecha;Concepto;Importe;Saldo
+01/01/2026;Venta menú diario;486.5;486.5
+02/01/2026;Compra de verduras;-124.3;362.2
+03/01/2026;Venta cenas;732.8;1095
+04/01/2026;Compra de carne;-286.4;808.6
+05/01/2026;Venta bebidas;318.2;1126.8
+06/01/2026;Pago proveedor panadería;-96.75;1030.05
+07/01/2026;Venta desayunos;214.6;1244.65
+08/01/2026;Compra de pescado;-354.9;889.75
+09/01/2026;Venta menú degustación;915;1804.75
+10/01/2026;Servicio de limpieza;-180;1624.75
+11/01/2026;Venta comidas;624.7;2249.45
+12/01/2026;Compra de vinos;-428.5;1820.95
+13/01/2026;Venta eventos privados;1250;3070.95
+14/01/2026;Reparación lavavajillas;-210;2860.95
+15/01/2026;Venta tapas;376.4;3237.35
+16/01/2026;Compra de lácteos;-87.6;3149.75
+17/01/2026;Venta cenas fin de semana;1032.9;4182.65
+18/01/2026;Nómina personal cocina;-2450;1732.65
+19/01/2026;Venta delivery;268.35;2001
+20/01/2026;Compra de aceite;-143.2;1857.8
+21/01/2026;Venta menú diario;512.1;2369.9
+22/01/2026;Pago electricidad;-390.65;1979.25
+23/01/2026;Venta bebidas;295.8;2275.05
+24/01/2026;Compra de café;-76.4;2198.65
+25/01/2026;Venta celebraciones;1480;3678.65
+26/01/2026;Pago alquiler local;-2100;1578.65
+27/01/2026;Venta desayunos;198.9;1777.55
+28/01/2026;Compra de productos limpieza;-112.5;1665.05
+29/01/2026;Venta comidas empresa;875;2540.05
+30/01/2026;Pago gestoría;-165;2375.05
+31/01/2026;Venta cenas;948.6;3323.65
+01/02/2026;Compra de marisco;-512.75;2810.9
+02/02/2026;Venta menú diario;467.2;3278.1
+03/02/2026;Compra de frutas;-94.85;3183.25
+04/02/2026;Venta tapas;342.1;3525.35
+05/02/2026;Pago agua;-128.4;3396.95
+06/02/2026;Venta delivery;301.7;3698.65
+07/02/2026;Compra de cerveza;-238.9;3459.75
+08/02/2026;Venta brunch domingo;694.5;4154.25
+09/02/2026;Mantenimiento TPV;-79.9;4074.35
+10/02/2026;Venta menú diario;523.8;4598.15
+11/02/2026;Compra de harina y pasta;-118.6;4479.55
+12/02/2026;Venta vinos;412.3;4891.85
+13/02/2026;Pago seguro responsabilidad civil;-320;4571.85
+14/02/2026;Cena San Valentín;1865;6436.85
+15/02/2026;Compra flores decoración;-68.2;6368.65
+16/02/2026;Venta comidas;589.75;6958.4
+17/02/2026;Compra de pollo;-204.15;6754.25
+18/02/2026;Venta desayunos;221.4;6975.65
+19/02/2026;Pago internet y teléfono;-84.99;6890.66
+20/02/2026;Venta cenas;876.2;7766.86
+21/02/2026;Compra de quesos;-156.7;7610.16
+22/02/2026;Venta eventos familiares;1120;8730.16
+23/02/2026;Reparación campana extractora;-275;8455.16
+24/02/2026;Venta menú diario;498.9;8954.06
+25/02/2026;Compra de huevos;-73.45;8880.61
+26/02/2026;Venta bebidas;336.6;9217.21
+27/02/2026;Pago uniformes personal;-245;8972.21
+28/02/2026;Venta cenas sábado;1086.4;10058.61
+01/03/2026;Compra de ternera;-398.3;9660.31
+02/03/2026;Venta menú diario;541.25;10201.56
+03/03/2026;Compra de arroz y legumbres;-132.8;10068.76
+04/03/2026;Venta delivery;284.9;10353.66
+05/03/2026;Pago publicidad online;-150;10203.66
+06/03/2026;Venta cenas;902.1;11105.76
+07/03/2026;Compra de vinos reserva;-620;10485.76
+08/03/2026;Venta brunch;712.35;11198.11
+09/03/2026;Pago mantenimiento maquinaria;-190;11008.11
+10/03/2026;Venta menú diario;506.7;11514.81
+11/03/2026;Compra de pan;-82.3;11432.51
+12/03/2026;Venta tapas;361.8;11794.31
+13/03/2026;Pago gas;-410.25;11384.06
+14/03/2026;Venta celebración cumpleaños;1340;12724.06
+15/03/2026;Compra de servilletas y manteles;-139.6;12584.46
+16/03/2026;Venta comidas;618.45;13202.91
+17/03/2026;Compra de pescado fresco;-376.2;12826.71
+18/03/2026;Venta desayunos;236.95;13063.66
+19/03/2026;Menú especial Día del Padre;1095;14158.66
+20/03/2026;Compra de bebidas sin alcohol;-174.35;13984.31
+21/03/2026;Venta cenas fin de semana;1118.7;15103.01
+22/03/2026;Nómina personal sala;-2180;12923.01
+23/03/2026;Venta delivery;315.25;13238.26
+24/03/2026;Compra de verduras ecológicas;-148.9;13089.36
+25/03/2026;Venta menú diario;529.4;13618.76
+26/03/2026;Pago licencia musical;-95;13523.76
+27/03/2026;Venta bebidas;389.2;13912.96
+28/03/2026;Compra de marisco;-548.6;13364.36
+29/03/2026;Venta evento corporativo;1780;15144.36
+30/03/2026;Pago gestoría trimestral;-240;14904.36
+31/03/2026;Venta cenas;967.85;15872.21
+01/04/2026;Compra de carne ibérica;-456.75;15415.46
+02/04/2026;Venta menú diario;552.6;15968.06
+03/04/2026;Compra de postres artesanos;-188.4;15779.66
+04/04/2026;Venta cenas sábado;1205.3;16984.96
+05/04/2026;Pago electricidad;-402.1;16582.86
+06/04/2026;Venta comidas;644.9;17227.76
+07/04/2026;Compra de café premium;-98.75;17129.01
+08/04/2026;Venta desayunos;247.5;17376.51
+09/04/2026;Pago reparación nevera;-315;17061.51
+10/04/2026;Venta menú degustación;1425;18486.51
