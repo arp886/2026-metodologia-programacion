@@ -30,14 +30,14 @@ Herramientas necesarias instaladas en el sistema:
 
 ## Entorno Python
 
-El entorno virtual ya esta creado en `.venv/`. Si hay que recrearlo:
+El entorno virtual se debe crearlo:
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-## Configuracion
+## Configuración
 
 El fichero `config.json` contiene:
 
@@ -46,7 +46,7 @@ El fichero `config.json` contiene:
 - Carpeta destino de repos de alumnos.
 - Repositorio del profesor con tests reales.
 - Numero de procesos paralelos para evaluacion (`max_workers`).
-- Fechas, semanas y codigos de entrega por sesion.
+- Fechas, semanas y codigos de entrega por sesión.
 
 Campos principales:
 
