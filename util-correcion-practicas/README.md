@@ -1,6 +1,8 @@
-# Utilidades MP2026
+# Utilidades MP
 
-Este directorio contiene dos utilidades Python:
+**Nota**: Se ha realizado mediante *vibe coding*.
+
+Utilidades Python:
 
 - `clonar_alumnos.py`: lee el Excel de notas y clona los repositorios de alumnos aprobados.
 - `evaluar_alumnos.py`: evalua commits y tests Java Maven por sesion, usando los tests del repositorio del profesor.
