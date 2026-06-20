@@ -1,0 +1,35 @@
+{
+  "github": {
+    "username": "***",
+    "token": "***",
+    "organization_unit": "https://github.com/ualmp2026"
+  },
+  "excel": {
+    "file": "NotasMP2026.xlsx",
+    "sheet": "NotasMP2026"
+  },
+  "clone": {
+    "destination": "alumnos",
+    "suffix": "MP2026"
+  },
+  "evaluation": {
+    "results_json": "NotasMP2026_evaluado.json",
+    "results_xlsx": "NotasMP2026_evaluado.xlsx",
+    "teacher_repo": "../MP2026Profesores",
+    "max_workers": 12,
+    "java_timeout_seconds": 90,
+    "commit_extra_days": 7,
+    "sessions": [
+      {"name": "Session01", "path": "sesion01", "week": 2, "start": "2026-02-16", "end": "2026-02-22", "codes": ["GTB2S0190", "GTA2S0120", "GTB3S0169", "GTA3S0189", "GTC2S0196", "GTB1S0113", "GTA1S0160", "GTC1S0132"]},
+      {"name": "Session02", "path": "sesion02", "week": 3, "start": "2026-02-23", "end": "2026-03-01", "codes": ["GTB2S0250", "GTA2S0278", "GTB3S0237", "GTA3S0256", "GTC2S0258", "GTB1S0220", "GTA1S0286", "GTC1S0265"]},
+      {"name": "Session03", "path": "sesion03", "week": 5, "start": "2026-03-09", "end": "2026-03-15", "codes": ["GTB2S0393", "GTA2S0316", "GTB3S0368", "GTA3S0322", "GTC2S0380", "GTB1S0333", "GTA1S0343", "GTC1S0315"]},
+      {"name": "Session04", "path": "sesion04", "week": 6, "start": "2026-03-16", "end": "2026-03-22", "codes": ["GTB2S0438", "GTA2S0436", "GTB3S0430", "GTA3S0471", "GTC2S0476", "GTB1S0482", "GTA1S0452", "GTC1S0465"]},
+      {"name": "Session05", "path": "sesion05", "week": 7, "start": "2026-03-23", "end": "2026-03-29", "codes": ["GTB2S0592", "GTA2S0566", "GTB3S0559", "GTA3S0576", "GTC2S0599", "GTB1S0532", "GTA1S0545", "GTC1S0551"]},
+      {"name": "Session06", "path": "sesion06", "week": 9, "start": "2026-04-06", "end": "2026-04-12", "codes": ["GTB2S0664", "GTA2S0674", "GTB3S0679", "GTA3S0685", "GTC2S0667", "GTB1S0693", "GTA1S0648", "GTC1S0629"]},
+      {"name": "Session07", "path": "sesion07", "week": 10, "start": "2026-04-13", "end": "2026-04-19", "codes": ["GTB2S0791", "GTA2S0781", "GTB3S0721", "GTA3S0732", "GTC2S0785", "GTB1S0774", "GTA1S0757", "GTC1S0761"]},
+      {"name": "Session08", "path": "sesion08", "week": 11, "start": "2026-04-20", "end": "2026-04-26", "codes": ["GTB2S0840", "GTA2S0888", "GTB3S0850", "GTA3S0839", "GTC2S0827", "GTB1S0872", "GTA1S0818", "GTC1S0813"]},
+      {"name": "Session09", "path": "sesion09", "week": 13, "start": "2026-05-04", "end": "2026-05-10", "codes": ["GTB2S0991", "GTA2S0939", "GTB3S0929", "GTA3S0955", "GTC2S0981", "GTB1S0983", "GTA1S0966", "GTC1S0935"]},
+      {"name": "Session10", "path": "sesion10", "week": 14, "start": "2026-05-11", "end": "2026-05-17", "codes": ["GTB2S1051", "GTA2S1088", "GTB3S1097", "GTA3S1090", "GTC2S1028", "GTB1S1044", "GTA1S1085", "GTC1S1050"]}
+    ]
+  }
+}
