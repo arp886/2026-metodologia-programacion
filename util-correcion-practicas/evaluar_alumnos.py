@@ -4,6 +4,7 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -199,6 +200,101 @@ def temporarily_hide_misplaced_tests(repo):
             shutil.rmtree(hidden_root)
 
 
+@contextmanager
+def temporarily_hide_other_sessions(repo, current_session_path):
+    main_session_root = repo / "src" / "main" / "java" / "org" / "mp"
+    hidden_root = repo / "target" / "evaluador-hidden-other-sessions"
+    moved = []
+
+    if main_session_root.exists():
+        for directory in sorted(main_session_root.iterdir()):
+            if not directory.is_dir():
+                continue
+            if not re.fullmatch(r"sesion\d+", directory.name):
+                continue
+            if directory.name == current_session_path:
+                continue
+            destination = hidden_root / directory.name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(directory), str(destination))
+            moved.append((directory, destination))
+
+    try:
+        yield
+    finally:
+        for original, hidden in reversed(moved):
+            original.parent.mkdir(parents=True, exist_ok=True)
+            if hidden.exists():
+                shutil.move(str(hidden), str(original))
+        if hidden_root.exists():
+            shutil.rmtree(hidden_root)
+
+
+def compilation_error_sources(output, repo):
+    sources = []
+    main_root = (repo / "src" / "main" / "java").resolve()
+    for match in re.finditer(r"\[ERROR\]\s+(.+?\.java):\[", output):
+        source = Path(match.group(1)).resolve()
+        try:
+            source.relative_to(main_root)
+        except ValueError:
+            continue
+        if source not in sources:
+            sources.append(source)
+    return sources
+
+
+def hide_compile_error_source(repo, source):
+    hidden_root = repo / "target" / "evaluador-hidden-compile-errors"
+    relative = source.relative_to(repo.resolve())
+    destination = hidden_root / relative
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(source), str(destination))
+    return source, destination
+
+
+def restore_hidden_compile_sources(repo, moved):
+    for original, hidden in reversed(moved):
+        original.parent.mkdir(parents=True, exist_ok=True)
+        if hidden.exists():
+            shutil.move(str(hidden), str(original))
+    hidden_root = repo / "target" / "evaluador-hidden-compile-errors"
+    if hidden_root.exists():
+        shutil.rmtree(hidden_root)
+
+
+def restore_interrupted_evaluator_state(repo):
+    main_session_root = repo / "src" / "main" / "java" / "org" / "mp"
+    hidden_sessions = repo / "target" / "evaluador-hidden-other-sessions"
+    if hidden_sessions.exists():
+        main_session_root.mkdir(parents=True, exist_ok=True)
+        for directory in sorted(hidden_sessions.iterdir()):
+            destination = main_session_root / directory.name
+            if not destination.exists():
+                shutil.move(str(directory), str(destination))
+        shutil.rmtree(hidden_sessions)
+
+    hidden_sources = repo / "target" / "evaluador-hidden-compile-errors"
+    if hidden_sources.exists():
+        for source in sorted(hidden_sources.rglob("*")):
+            if not source.is_file():
+                continue
+            relative = source.relative_to(hidden_sources)
+            destination = repo / relative
+            if not destination.exists():
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(source), str(destination))
+        shutil.rmtree(hidden_sources)
+
+    backup_tests = repo / "target" / "evaluador-backup-student-tests"
+    student_test_root = test_root(repo)
+    if backup_tests.exists():
+        if student_test_root.exists():
+            shutil.rmtree(student_test_root)
+        student_test_root.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(backup_tests), str(student_test_root))
+
+
 def parse_surefire_reports(repo, session_path):
     reports_dir = repo / "target" / "surefire-reports"
     totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
@@ -219,12 +315,24 @@ def parse_surefire_reports(repo, session_path):
     return totals
 
 
-def evaluate_session(repo, teacher_repo, session, timeout, extra_days):
+@contextmanager
+def temporary_evaluation_repo(repo):
+    with tempfile.TemporaryDirectory(prefix=f"evaluador-{repo.name}-") as temp_dir:
+        work_repo = Path(temp_dir) / repo.name
+        shutil.copytree(
+            repo,
+            work_repo,
+            ignore=shutil.ignore_patterns(".git", "target"),
+        )
+        yield work_repo
+
+
+def evaluate_session(repo, work_repo, teacher_repo, session, timeout, extra_days):
     has_commit, commit_samples = git_commit_for_session(repo, session, extra_days)
     teacher_files = test_files_for_session(teacher_repo, session["path"])
     classes = test_classes_for_session(teacher_repo, session["path"])
     expected_total = count_test_methods(teacher_files)
-    reports_dir = repo / "target" / "surefire-reports"
+    reports_dir = work_repo / "target" / "surefire-reports"
     if reports_dir.exists():
         shutil.rmtree(reports_dir)
 
@@ -246,15 +354,37 @@ def evaluate_session(repo, teacher_repo, session, timeout, extra_days):
     for teacher_file in teacher_files:
         if reports_dir.exists():
             shutil.rmtree(reports_dir)
-        with temporary_teacher_test_file(repo, teacher_repo, teacher_file) as class_name, temporarily_hide_misplaced_tests(repo):
-            result = run(
-                ["mvn", "-q", "-DfailIfNoTests=false", f"-Dtest={class_name}", "test"],
-                repo,
-                timeout=timeout,
-            )
+        hidden_compile_sources = []
+        with temporary_teacher_test_file(work_repo, teacher_repo, teacher_file) as class_name, temporarily_hide_misplaced_tests(work_repo), temporarily_hide_other_sessions(work_repo, session["path"]):
+            try:
+                for _ in range(10):
+                    if reports_dir.exists():
+                        shutil.rmtree(reports_dir)
+                    result = run(
+                        ["mvn", "-q", "-DfailIfNoTests=false", f"-Dtest={class_name}", "test"],
+                        work_repo,
+                        timeout=timeout,
+                    )
+                    if result.returncode == 0:
+                        break
+
+                    sources = compilation_error_sources(result.stdout, work_repo)
+                    new_sources = [source for source in sources if source.exists()]
+                    if not new_sources:
+                        break
+                    for source in new_sources:
+                        hidden_compile_sources.append(hide_compile_error_source(work_repo, source))
+                else:
+                    result = run(
+                        ["mvn", "-q", "-DfailIfNoTests=false", f"-Dtest={class_name}", "test"],
+                        work_repo,
+                        timeout=timeout,
+                    )
+            finally:
+                restore_hidden_compile_sources(work_repo, hidden_compile_sources)
         if result.returncode != 0:
             failed_commands += 1
-        class_totals = parse_surefire_reports(repo, session["path"])
+        class_totals = parse_surefire_reports(work_repo, session["path"])
         for key in totals:
             totals[key] += class_totals[key]
 
@@ -337,30 +467,33 @@ def write_results_workbook(root, config, results_by_repo):
 
 def evaluate_repo(repo, teacher_repo, evaluation):
     print(f"Evaluando {repo.name}", flush=True)
+    restore_interrupted_evaluator_state(repo)
     repo_results = {}
     details = []
-    for session in evaluation["sessions"]:
-        data = evaluate_session(
-            repo,
-            teacher_repo,
-            session,
-            evaluation.get("java_timeout_seconds", 90),
-            evaluation.get("commit_extra_days", 7),
-        )
-        row = {
-            "repo": repo.name,
-            "session": session["name"],
-            "commit_ok": data["commit_ok"],
-            "test_classes": data["test_classes"],
-            "tests_passed": data["tests_passed"],
-            "tests_total": data["tests_total"],
-            "failures": data["failures"],
-            "errors": data["errors"],
-            "skipped": data["skipped"],
-            "status": data["status"],
-        }
-        repo_results[session["name"]] = row
-        details.append({**row, "commit_samples": data["commit_samples"]})
+    with temporary_evaluation_repo(repo) as work_repo:
+        for session in evaluation["sessions"]:
+            data = evaluate_session(
+                repo,
+                work_repo,
+                teacher_repo,
+                session,
+                evaluation.get("java_timeout_seconds", 90),
+                evaluation.get("commit_extra_days", 7),
+            )
+            row = {
+                "repo": repo.name,
+                "session": session["name"],
+                "commit_ok": data["commit_ok"],
+                "test_classes": data["test_classes"],
+                "tests_passed": data["tests_passed"],
+                "tests_total": data["tests_total"],
+                "failures": data["failures"],
+                "errors": data["errors"],
+                "skipped": data["skipped"],
+                "status": data["status"],
+            }
+            repo_results[session["name"]] = row
+            details.append({**row, "commit_samples": data["commit_samples"]})
     return repo.name, repo_results, details
 
 
