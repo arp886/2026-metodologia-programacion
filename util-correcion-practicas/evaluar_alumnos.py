@@ -13,7 +13,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from clonar_alumnos import repo_name_from_student
+from clonar_alumnos import approved_students, excel_column_index, parse_grade, repo_name_from_student
 
 
 def run(command, cwd, timeout=None):
@@ -445,8 +445,15 @@ def write_results_workbook(root, config, results_by_repo):
         sheet.cell(row=1, column=column + 1, value=f"{session_label} test")
 
     suffix = config["clone"].get("suffix", "MP2026")
+    name_column = excel_column_index(excel_config.get("student_name_column", "B"))
+    grade_column = excel_column_index(excel_config.get("approved_grade_column", "J"))
+    min_grade = excel_config.get("approved_min_grade", 5)
     for row in range(2, sheet.max_row + 1):
-        full_name = values_sheet.cell(row=row, column=2).value or sheet.cell(row=row, column=2).value
+        grade = parse_grade(values_sheet.cell(row=row, column=grade_column).value or sheet.cell(row=row, column=grade_column).value)
+        if grade is None or grade <= min_grade:
+            continue
+
+        full_name = values_sheet.cell(row=row, column=name_column).value or sheet.cell(row=row, column=name_column).value
         if not full_name:
             continue
         try:
@@ -514,6 +521,21 @@ def main():
     repos = sorted(path for path in students_dir.iterdir() if (path / ".git").exists())
     if args.repo:
         repos = [path for path in repos if path.name == args.repo]
+    else:
+        excel = config["excel"]
+        suffix = config["clone"].get("suffix", "MP2026")
+        workbook_path = root / excel["file"]
+        approved_repo_names = {
+            repo_name_from_student(full_name, suffix)
+            for full_name, _ in approved_students(
+                workbook_path,
+                excel["sheet"],
+                excel.get("student_name_column", "B"),
+                excel.get("approved_grade_column", "J"),
+                excel.get("approved_min_grade", 5),
+            )
+        }
+        repos = [path for path in repos if path.name in approved_repo_names]
 
     max_workers = int(evaluation.get("max_workers", 1))
     results_by_repo = {}

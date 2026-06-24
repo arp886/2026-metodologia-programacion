@@ -1,8 +1,6 @@
-# Utilidades MP
+# Utilidades MP2026
 
-**Nota**: Se ha realizado mediante *vibe coding*.
-
-Utilidades Python:
+Este directorio contiene dos utilidades Python:
 
 - `clonar_alumnos.py`: lee el Excel de notas y clona los repositorios de alumnos aprobados.
 - `evaluar_alumnos.py`: evalua commits y tests Java Maven por sesion, usando los tests del repositorio del profesor.
@@ -30,30 +28,35 @@ Herramientas necesarias instaladas en el sistema:
 
 ## Entorno Python
 
-El entorno virtual se debe crearlo:
+El entorno virtual ya esta creado en `.venv/`. Si hay que recrearlo:
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-## Configuración
+## Configuracion
 
 El fichero `config.json` contiene:
 
 - Datos GitHub para clonado.
 - Fichero Excel y hoja a leer.
+- Columna del nombre del alumno.
+- Columna de nota de examen/aprobado.
 - Carpeta destino de repos de alumnos.
 - Repositorio del profesor con tests reales.
 - Numero de procesos paralelos para evaluacion (`max_workers`).
-- Fechas, semanas y codigos de entrega por sesión.
+- Fechas, semanas y codigos de entrega por sesion.
 
 Campos principales:
 
 ```json
 "excel": {
   "file": "NotasMP2026.xlsx",
-  "sheet": "NotasMP2026"
+  "sheet": "NotasMP2026",
+  "student_name_column": "B",
+  "approved_grade_column": "J",
+  "approved_min_grade": 5
 },
 "clone": {
   "destination": "alumnos",
@@ -85,8 +88,9 @@ Funcionamiento:
 
 - Lee `NotasMP2026.xlsx`.
 - Usa la hoja configurada en `config.json`.
-- Toma nombre y apellidos de la columna B.
-- Solo procesa alumnos con columna E mayor que 5.
+- Toma nombre y apellidos de la columna configurada en `student_name_column`, actualmente `B`.
+- Solo procesa alumnos con la columna configurada en `approved_grade_column` mayor que `approved_min_grade`.
+- Actualmente la nota de examen/aprobado esta configurada en la columna `J`.
 - Construye el nombre del repo normalizando mayusculas y quitando tildes.
 - Clona en la carpeta `alumnos/`.
 - Si el repo ya existe localmente, lo salta.
@@ -112,14 +116,20 @@ Comando para evaluar un solo repo:
 Funcionamiento:
 
 - Recorre los repos en `alumnos/`.
+- Por defecto solo evalua repos de alumnos aprobados segun `approved_grade_column` y `approved_min_grade`.
+- Si se usa `--repo`, evalua ese repo concreto aunque no pase por el filtro del Excel.
 - Para cada alumno y sesion, comprueba si hay commit con los codigos/fechas configurados.
 - Usa los tests reales del profesor desde `../MP2026Profesores`.
 - Copia temporalmente cada clase `*Test.java` del profesor dentro del repo del alumno.
 - Ejecuta Maven contra el codigo del alumno.
+- Ejecuta Maven sobre una copia temporal del repo del alumno, no sobre `alumnos/<RepoAlumno>` directamente.
+- Aisla la sesion evaluada ocultando temporalmente el codigo de otras sesiones en la copia temporal.
+- Si Maven detecta un fichero `.java` concreto que impide compilar, el evaluador lo oculta en la copia temporal y reintenta para evaluar lo que sea posible.
 - Ejecuta las clases de test de forma aislada para que un test que no compile no bloquee toda la sesion.
 - Restaura los tests originales del alumno al terminar.
 - Oculta temporalmente tests mal colocados en `src/main/java` para que no rompan la compilacion Maven.
 - Escribe resultados en JSON y en una copia del Excel.
+- En el Excel evaluado solo rellena filas de alumnos aprobados segun `approved_grade_column` y `approved_min_grade`.
 
 Paralelismo:
 
@@ -163,8 +173,10 @@ Por `evaluar_alumnos.py`:
 
 Ficheros temporales:
 
-- Durante la evaluacion se usan directorios temporales dentro de `target/` de cada alumno.
-- El script los elimina al terminar.
+- Durante la evaluacion se crea una copia temporal de cada repositorio en el directorio temporal del sistema.
+- Dentro de esa copia pueden aparecer directorios `target/evaluador-*`.
+- El script elimina la copia temporal al terminar.
+- Los repositorios de `alumnos/` no se modifican permanentemente.
 
 ## Notas
 
