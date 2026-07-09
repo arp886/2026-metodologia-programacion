@@ -327,7 +327,7 @@ def temporary_evaluation_repo(repo):
         yield work_repo
 
 
-def evaluate_session(repo, work_repo, teacher_repo, session, timeout, extra_days):
+def evaluate_session(repo, work_repo, teacher_repo, session, timeout, extra_days, verbose=False):
     has_commit, commit_samples = git_commit_for_session(repo, session, extra_days)
     teacher_files = test_files_for_session(teacher_repo, session["path"])
     classes = test_classes_for_session(teacher_repo, session["path"])
@@ -337,6 +337,8 @@ def evaluate_session(repo, work_repo, teacher_repo, session, timeout, extra_days
         shutil.rmtree(reports_dir)
 
     if not classes:
+        if verbose:
+            print(f"[{repo.name}][{session['name']}] sin tests del profesor", flush=True)
         return {
             "commit_ok": has_commit,
             "commit_samples": commit_samples,
@@ -356,6 +358,8 @@ def evaluate_session(repo, work_repo, teacher_repo, session, timeout, extra_days
             shutil.rmtree(reports_dir)
         hidden_compile_sources = []
         with temporary_teacher_test_file(work_repo, teacher_repo, teacher_file) as class_name, temporarily_hide_misplaced_tests(work_repo), temporarily_hide_other_sessions(work_repo, session["path"]):
+            if verbose:
+                print(f"[{repo.name}][{session['name']}] ejecutando {class_name}", flush=True)
             try:
                 for _ in range(10):
                     if reports_dir.exists():
@@ -373,6 +377,9 @@ def evaluate_session(repo, work_repo, teacher_repo, session, timeout, extra_days
                     if not new_sources:
                         break
                     for source in new_sources:
+                        if verbose:
+                            relative_source = source.relative_to(work_repo)
+                            print(f"[{repo.name}][{session['name']}] aislando {relative_source}", flush=True)
                         hidden_compile_sources.append(hide_compile_error_source(work_repo, source))
                 else:
                     result = run(
@@ -385,6 +392,14 @@ def evaluate_session(repo, work_repo, teacher_repo, session, timeout, extra_days
         if result.returncode != 0:
             failed_commands += 1
         class_totals = parse_surefire_reports(work_repo, session["path"])
+        class_passed = class_totals["tests"] - class_totals["failures"] - class_totals["errors"] - class_totals["skipped"]
+        if verbose:
+            status = "ok" if result.returncode == 0 else "error"
+            print(
+                f"[{repo.name}][{session['name']}] ejecutado {class_name}: "
+                f"{status}, {class_passed} / {class_totals['tests']}",
+                flush=True,
+            )
         for key in totals:
             totals[key] += class_totals[key]
 
@@ -472,6 +487,30 @@ def write_results_workbook(root, config, results_by_repo):
     return output_path
 
 
+def markdown_escape(value):
+    return str(value).replace("|", "\\|").replace("\n", " ")
+
+
+def markdown_results(config, repos, results_by_repo):
+    sessions = config["evaluation"]["sessions"]
+    headers = ["repo"]
+    for session in sessions:
+        session_label = session["name"].replace("Session", "sesion")
+        headers.extend([f"{session_label} commit", f"{session_label} test"])
+
+    lines = []
+    lines.append("| " + " | ".join(headers) + " |")
+    lines.append("| " + " | ".join(["---"] * len(headers)) + " |")
+    for repo in repos:
+        repo_results = results_by_repo.get(repo.name, {})
+        row = [repo.name]
+        for session in sessions:
+            result = repo_results.get(session["name"])
+            row.extend([commit_value(result), test_value(result)])
+        lines.append("| " + " | ".join(markdown_escape(value) for value in row) + " |")
+    return "\n".join(lines)
+
+
 def evaluate_repo(repo, teacher_repo, evaluation):
     print(f"Evaluando {repo.name}", flush=True)
     restore_interrupted_evaluator_state(repo)
@@ -486,6 +525,7 @@ def evaluate_repo(repo, teacher_repo, evaluation):
                 session,
                 evaluation.get("java_timeout_seconds", 90),
                 evaluation.get("commit_extra_days", 7),
+                evaluation.get("verbose", False),
             )
             row = {
                 "repo": repo.name,
@@ -508,11 +548,14 @@ def main():
     parser = argparse.ArgumentParser(description="Evalua commits y tests por sesion en repos Java Maven.")
     parser.add_argument("--config", default="config.json")
     parser.add_argument("--repo", help="Evalua solo un repositorio por nombre")
+    parser.add_argument("--verbose", action="store_true", help="Muestra cada clase de test al empezar y al terminar")
+    parser.add_argument("--md", action="store_true", help="Muestra una tabla Markdown y no actualiza el fichero xlsx")
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parent
     config = json.loads((root / args.config).read_text(encoding="utf-8"))
     evaluation = config["evaluation"]
+    evaluation = {**evaluation, "verbose": args.verbose}
     students_dir = root / config["clone"]["destination"]
     teacher_repo = (root / evaluation["teacher_repo"]).resolve()
     if not (teacher_repo / "src" / "test" / "java").exists():
@@ -525,17 +568,22 @@ def main():
         excel = config["excel"]
         suffix = config["clone"].get("suffix", "MP2026")
         workbook_path = root / excel["file"]
-        approved_repo_names = {
-            repo_name_from_student(full_name, suffix)
-            for full_name, _ in approved_students(
-                workbook_path,
-                excel["sheet"],
-                excel.get("student_name_column", "B"),
-                excel.get("approved_grade_column", "J"),
-                excel.get("approved_min_grade", 5),
-            )
-        }
-        repos = [path for path in repos if path.name in approved_repo_names]
+        if workbook_path.exists():
+            approved_repo_names = {
+                repo_name_from_student(full_name, suffix)
+                for full_name, _ in approved_students(
+                    workbook_path,
+                    excel["sheet"],
+                    excel.get("student_name_column", "B"),
+                    excel.get("approved_grade_column", "J"),
+                    excel.get("approved_min_grade", 5),
+                )
+            }
+            repos = [path for path in repos if path.name in approved_repo_names]
+        elif args.md:
+            print(f"Aviso: no existe {workbook_path.name}; se evaluaran todos los repos locales.", flush=True)
+        else:
+            raise FileNotFoundError(f"No existe el fichero Excel: {workbook_path}")
 
     max_workers = int(evaluation.get("max_workers", 1))
     results_by_repo = {}
@@ -561,8 +609,12 @@ def main():
     }
     json_path = root / evaluation["results_json"]
     json_path.write_text(json.dumps(details, ensure_ascii=False, indent=2), encoding="utf-8")
-    xlsx_path = write_results_workbook(root, config, results_by_repo)
-    print(f"Resultados escritos en {json_path.name} y {xlsx_path.name}")
+    if args.md:
+        print(markdown_results(config, repos, results_by_repo))
+        print(f"Resultados escritos en {json_path.name}")
+    else:
+        xlsx_path = write_results_workbook(root, config, results_by_repo)
+        print(f"Resultados escritos en {json_path.name} y {xlsx_path.name}")
     print("Totales tests profesor: " + ", ".join(f"{name}={total}" for name, total in teacher_totals.items()))
 
 

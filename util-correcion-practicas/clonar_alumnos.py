@@ -8,6 +8,7 @@ import unicodedata
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.utils import column_index_from_string
 
 
 def remove_accents(value):
@@ -47,17 +48,25 @@ def parse_grade(value):
     return float(match.group(0)) if match else None
 
 
-def approved_students(workbook_path, sheet_name):
+def excel_column_index(column):
+    if isinstance(column, int):
+        return column
+    return column_index_from_string(str(column).strip())
+
+
+def approved_students(workbook_path, sheet_name, name_column, grade_column, min_grade):
     workbook = load_workbook(workbook_path, data_only=True, read_only=True)
     if sheet_name not in workbook.sheetnames:
         available = ", ".join(workbook.sheetnames)
         raise ValueError(f"No existe la hoja {sheet_name!r}. Hojas disponibles: {available}")
 
     sheet = workbook[sheet_name]
+    name_index = excel_column_index(name_column) - 1
+    grade_index = excel_column_index(grade_column) - 1
     for row in sheet.iter_rows(min_row=1):
-        full_name = row[1].value if len(row) > 1 else None
-        grade = parse_grade(row[4].value if len(row) > 4 else None)
-        if full_name and grade is not None and grade > 5:
+        full_name = row[name_index].value if len(row) > name_index else None
+        grade = parse_grade(row[grade_index].value if len(row) > grade_index else None)
+        if full_name and grade is not None and grade > min_grade:
             yield str(full_name).strip(), grade
 
 
@@ -72,10 +81,53 @@ def public_url(base_url, repo_name):
     return f"{base_url.rstrip('/')}/{repo_name}"
 
 
+def clone_with_git(repo_url, repo_dir):
+    return subprocess.run(
+        ["git", "clone", repo_url, str(repo_dir)],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+
+def clone_repo(repo_name, destination, github, token, dry_run=False, label=None, no_auth=False):
+    repo_dir = destination / repo_name
+    visible_url = public_url(github["organization_unit"], repo_name)
+
+    if repo_dir.exists():
+        subject = label or repo_name
+        print(f"Saltando {subject}: ya existe {repo_dir}")
+        return
+
+    subject = f"{label}: " if label else ""
+    print(f"Clonando {subject}{visible_url}")
+    if not dry_run:
+        urls = []
+        if token and not no_auth:
+            urls.append(authenticated_url(github["organization_unit"], github["username"], token, repo_name))
+        urls.append(f"{visible_url}.git")
+
+        last_output = ""
+        for index, repo_url in enumerate(urls):
+            result = clone_with_git(repo_url, repo_dir)
+            if result.returncode == 0:
+                return
+            last_output = result.stdout
+            if index == 0 and len(urls) > 1:
+                print("Fallo el clonado autenticado; reintentando sin token...")
+
+        print(f"No se pudo clonar {visible_url}")
+        if last_output:
+            print(last_output.strip())
+        raise SystemExit(1)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Clona repositorios de alumnos aprobados de MP2026.")
     parser.add_argument("--config", default="config.json", help="Ruta al fichero de configuracion")
     parser.add_argument("--dry-run", action="store_true", help="Muestra lo que haria sin clonar")
+    parser.add_argument("--repo", help="Clona un repositorio concreto por nombre, por ejemplo ZapataRojasMiguelMP2026")
+    parser.add_argument("--no-auth", action="store_true", help="Clona usando la URL publica, sin token")
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parent
@@ -93,19 +145,19 @@ def main():
     workbook_path = root / excel["file"]
     suffix = clone.get("suffix", "MP2026")
 
-    for full_name, grade in approved_students(workbook_path, excel["sheet"]):
+    if args.repo:
+        clone_repo(args.repo, destination, github, token, dry_run=args.dry_run, no_auth=args.no_auth)
+        return
+
+    for full_name, grade in approved_students(
+        workbook_path,
+        excel["sheet"],
+        excel.get("student_name_column", "B"),
+        excel.get("approved_grade_column", "J"),
+        excel.get("approved_min_grade", 5),
+    ):
         repo_name = repo_name_from_student(full_name, suffix)
-        repo_dir = destination / repo_name
-        repo_url = authenticated_url(github["organization_unit"], github["username"], token, repo_name)
-        visible_url = public_url(github["organization_unit"], repo_name)
-
-        if repo_dir.exists():
-            print(f"Saltando {full_name} ({grade}): ya existe {repo_dir}")
-            continue
-
-        print(f"Clonando {full_name} ({grade}): {visible_url}")
-        if not args.dry_run:
-            subprocess.run(["git", "clone", repo_url, str(repo_dir)], check=True)
+        clone_repo(repo_name, destination, github, token, dry_run=args.dry_run, label=f"{full_name} ({grade})", no_auth=args.no_auth)
 
 
 if __name__ == "__main__":
